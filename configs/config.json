@@ -1,0 +1,26 @@
+{
+    "num_readouts": 256,
+    "im_w": 128,
+    "k_w": 256,
+    "interpolation_w": 6,
+
+    "train_set_size": 200000,
+    "validation_set_size": 50000,
+    "test_set_size": 1000,
+
+    "learning_rate": 0.00001,
+    "num_epochs": 2000,
+
+    "selected_coils_list": [0, 3, 9, 10, 12, 13, 14, 15],
+
+    "path_to_images": "/imagenet_2012/",
+    "path_to_data": "/path_to_synthetic_data/",
+    "path_to_save": "/path_to_results/",
+    "path_to_normalization_factor_csv":"/path_to_normalization_factor_csv/",
+    "path_to_split_csv":"/path_to_data_split_csv/",
+    "path_to_measurements": "/path_to_mr_measurements/",
+
+
+
+    "seed": 123456789
+}
