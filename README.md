@@ -1,5 +1,5 @@
 # Fast machine learning reconstruction of radially undersampled k-space data in interventional MRI
-This repository contains code for the fast machine learning (ML) reconstruction of radially undersampled 2D k-space data for data acquired during MR-guided percutaneous interventions.
+This repository contains code for the fast machine learning (ML) reconstruction of radially undersampled 2D k-space data acquired during MR-guided percutaneous interventions.
 
 The code has been developed for the paper *"Fast machine learning reconstruction of radially undersampled k-space data in interventional MRI"* by Topalis et al..
 
