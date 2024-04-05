@@ -1,0 +1,7 @@
+portalocker==2.7.0 # needed since torchdata is installed without dependencies
+ray[default]==2.5.1
+ray[tune]==2.5.1
+torchio==0.18.92
+torchviz==0.0.2
+-r requirements_common.txt
+-c constraints_pytorch.txt
