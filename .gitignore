@@ -20,6 +20,10 @@
 !src/preprocessing/*.py
 !src/utils/*.py
 
+!docker/
+!docker/*
+
+
 ## Ignore
 # Specific to project
 twixtools/

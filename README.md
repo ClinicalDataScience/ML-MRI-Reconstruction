@@ -3,6 +3,16 @@ This repository contains code for the fast machine learning (ML) reconstruction 
 
 The code has been developed for the paper *"Fast machine learning reconstruction of radially undersampled k-space data in interventional MRI"* by Topalis et al..
 
+## Computing environment/docker container
+
+### Docker hub
+
+The computing environment for this repository can be obtained from docker hub:
+
+`docker pull docker.io/balthasarschachtner/radler:ML-MRI-Reconstruction`
+
+To build the container yourself, go to the `docker` directory and run `docker build .`.
+
 ## Run code
 This repository contains code for the training and evaluation of the proposed ML model for the fast reconstruction of undersampled MR data.
 
