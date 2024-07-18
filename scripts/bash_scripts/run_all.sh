@@ -21,3 +21,4 @@ for number_of_spokes in "${list_number_of_spokes[@]}" ; do
 done
 
 . scripts/bash_scripts/06_run_evaluation_mr_measurements.sh $config_name
+. scripts/bash_scripts/06_run_evaluation_mr_measurements_liver.sh $config_name

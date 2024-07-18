@@ -387,10 +387,7 @@ def define_save_name_evaluation_synthetic_data(
 
 
 def define_save_name_results_mri_measurements(
-    method: str,
-    device: str,
-    orientation: int,
-    num_spokes: int,
+    method: str, device: str, orientation: int, num_spokes: int, image_number: int
 ) -> str:
     """Define the filename for the results of the reconstruction for k-space measurements data."""
     save_name = (
@@ -405,6 +402,10 @@ def define_save_name_results_mri_measurements(
         + 'orientation'
         + '_'
         + str(orientation)
+        + '_'
+        + 'imagenumber'
+        + '_'
+        + str(image_number)
         + '_'
         + 'spokes'
         + '_'

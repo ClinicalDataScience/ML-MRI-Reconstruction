@@ -12,7 +12,8 @@ import numpy as np
 import torch
 from scipy.ndimage.interpolation import rotate
 from src.conventional_reconstruction.conventional_reconstruction_radial_measurements import (
-    reconstruct_k_space_measurements_with_bart,
+    reconstruct_k_space_measurements_with_compressed_sensing,
+    reconstruct_k_space_measurements_with_nufft_adjoint,
 )
 from src.conventional_reconstruction.conventional_reconstruction_utils import (
     define_trajectory_bart,
@@ -47,6 +48,7 @@ class ReconstructionMRMeasurements:
         im_w: int,
         k_w: int,
         num_coils: int,
+        num_repeat: int,
     ) -> None:
         """Initialize ReconstructionMRMeasurements."""
         self.num_spokes = num_spokes
@@ -54,7 +56,7 @@ class ReconstructionMRMeasurements:
         self.im_w = im_w
         self.k_w = k_w
         self.num_coils = num_coils
-        self.num_repeat = 100  # define how often the reconstruction should be repeated to achieve more precise time measurements
+        self.num_repeat = num_repeat  # define how often the reconstruction should be repeated to achieve more precise time measurements
 
     def rotate_images(self, reconstruction, orientation):
         """Rotate images."""
@@ -74,6 +76,7 @@ class ReconstructionMRMeasurements:
         orientation: int,
         time_list: List[float],
         path_to_save_results: Union[str, os.PathLike],
+        image_number: int,
         subfolder_name: Optional[int] = None,
     ) -> None:
         """Save evalution."""
@@ -84,7 +87,7 @@ class ReconstructionMRMeasurements:
             path_to_save_results, self.num_spokes, method, subfolder_name
         )
         save_name = define_save_name_results_mri_measurements(
-            method, device, orientation, self.num_spokes
+            method, device, orientation, self.num_spokes, image_number
         )
         make_directory(path_to_save_results_reconstruction)
         make_directory(path_to_save_results_evaluation)
@@ -257,11 +260,6 @@ class ReconstructionMRMeasurements:
                 tmpdirname,
             )
 
-            if method == 'CS':
-                path_to_sensitivity_map = save_in_devshm(
-                    path_to_sensitivity_map, tmpdirname
-                )
-
             path_traj_bart = save_in_devshm(path_traj_bart, tmpdirname)
             path_to_reconstruction = tmpdirname + '/' + 'reconstructed_image_bart_tmp'
 
@@ -282,15 +280,18 @@ class ReconstructionMRMeasurements:
                     bart_bitmask,
                     stepsize,
                 )
-            else:
+            elif method == 'CS':
                 path_to_save_mri_measurements_reshape_k_space_tmp_dens_corr = None
+                path_to_espirit_calibration = os.path.join(
+                    tmpdirname, 'espirit_calibration'
+                )
                 cmp = return_command_for_bart_reconstruction(
                     method,
                     path_traj_bart,
                     path_to_save_mri_measurements_reshape_k_space_tmp,
                     path_to_reconstruction,
                     device,
-                    path_to_sensitivity_map,
+                    path_to_espirit_calibration,
                     bart_maxiter,
                     bart_regularization_option,
                     bart_regularization,
@@ -300,6 +301,10 @@ class ReconstructionMRMeasurements:
 
             # warm up
             if warm_up:
+                if method == 'CS':
+                    path_to_sensitivity_map = save_in_devshm(
+                        path_to_sensitivity_map, tmpdirname
+                    )
                 warm_up_bart_reconstruction(
                     method,
                     self.num_spokes,
@@ -319,15 +324,29 @@ class ReconstructionMRMeasurements:
 
             # repeat the reconstruction num_repeat times to obtain a more precise time measurement
             for repeat in range(0, self.num_repeat):
-                with timer:
-                    reconstruction = reconstruct_k_space_measurements_with_bart(
-                        cmp,
-                        method,
-                        path_to_reconstruction,
-                        path_to_save_mri_measurements_reshape_k_space_tmp,
-                        path_to_save_mri_measurements_reshape_k_space_tmp_dens_corr,
-                        dens_correction_nufft_adjoint,
-                    )
+                if method == 'nufft_adjoint':
+                    with timer:
+                        reconstruction = reconstruct_k_space_measurements_with_nufft_adjoint(
+                            cmp,
+                            path_to_reconstruction,
+                            path_to_save_mri_measurements_reshape_k_space_tmp,
+                            path_to_save_mri_measurements_reshape_k_space_tmp_dens_corr,
+                            dens_correction_nufft_adjoint,
+                        )
+
+                elif method == 'CS':
+                    with timer:
+                        reconstruction = (
+                            reconstruct_k_space_measurements_with_compressed_sensing(
+                                cmp,
+                                path_to_reconstruction,
+                                path_to_save_mri_measurements_reshape_k_space_tmp,
+                                self.im_w,
+                                path_traj_bart,
+                                tmpdirname,
+                            )
+                        )
+
                 # append reconstruction time to list
                 time_list.append(timer.execution_time)
 

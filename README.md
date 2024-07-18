@@ -1,7 +1,7 @@
-# Fast machine learning reconstruction of radially undersampled k-space data in interventional MRI
+# Fast machine learning reconstruction of radially undersampled k-space data for interventional MRI
 This repository contains code for the fast machine learning (ML) reconstruction of radially undersampled 2D k-space data acquired during MR-guided percutaneous interventions.
 
-The code has been developed for the paper *"Fast machine learning reconstruction of radially undersampled k-space data in interventional MRI"* by Topalis et al..
+The code has been developed for the paper *"Fast machine learning reconstruction of radially undersampled k-space data for interventional MRI"* by Topalis et al..
 
 ## Computing environment/docker container
 
@@ -76,17 +76,17 @@ and a compressed sensing (CS) approach
 implemented in the Berkeley advanced reconstruction toolbox (BART) [3, 4].
 
 ### 4. Reconstructing MR data
-We reconstruct k-space measurements with the ML model as follows:
+We reconstruct phantom and ex vivo k-space measurements with the ML model as follows:
 ```shell
-python -m scripts.06_reconstruct_measurements --config_file_name <config_name> --num_spokes <number_of_spokes> --method ML --device <reconstruction_device> --filename <filename> --image_number <set_image_number> --orientation <set_orientation> --model_name <model_name> --folder_name_ml_model <subfolder_name> --warm_up
+python -m scripts.06_reconstruct_measurements --config_file_name <config_name> --num_spokes <number_of_spokes> --method ML --device <reconstruction_device> --filename <filename> --image_number <set_image_number> --orientation <set_orientation> --model_name <model_name> --folder_name_ml_model <subfolder_name> --subfolder_name <subfolder_name> --selected_coils_list <selected_coils_list> --num_repeat <num_repeat> --warm_up
 ```
 For comparison, we also reconstruct the MR data with a NUFFT
 ```shell
-python -m scripts.06_reconstruct_measurements --config_file_name <config_name> --num_spokes <number_of_spokes> --method nufft_adjoint --device <reconstruction_device> --filename <filename> --image_number <set_image_number> --orientation <set_orientation> --warm_up
+python -m scripts.06_reconstruct_measurements --config_file_name <config_name> --num_spokes <number_of_spokes> --method nufft_adjoint --device <reconstruction_device> --filename <filename> --image_number <set_image_number> --orientation <set_orientation> --subfolder_name <subfolder_name> --selected_coils_list <selected_coils_list> --num_repeat <num_repeat> --warm_up
 ```
 and with CS
 ```shell
-python -m scripts.06_reconstruct_measurements --config_file_name <config_name> --num_spokes <number_of_spokes> --method CS --device <reconstruction_device> --filename <filename> --image_number <set_image_number> --orientation <set_orientation> --maxiter <maxiter> --bart_regularization_option <bart_regularization_option> --bart_regularization <bart_regularization> --bart_stepsize <bart_stepsize> --warm_up
+python -m scripts.06_reconstruct_measurements --config_file_name <config_name> --num_spokes <number_of_spokes> --method CS --device <reconstruction_device> --filename <filename> --image_number <set_image_number> --orientation <set_orientation> --maxiter <maxiter> --bart_regularization_option <bart_regularization_option> --bart_regularization <bart_regularization> --bart_stepsize <bart_stepsize> --subfolder_name <subfolder_name> --selected_coils_list <selected_coils_list> --num_repeat <num_repeat> --warm_up
 ```
 
 ### Reproduce results from paper
@@ -94,7 +94,7 @@ To reproduce the results from the paper, run the following bash script:
 ```shell
 . scripts/bash_scripts/run_all.sh <config_name>
 ```
-Please change the name of the raw MR data files in `scripts/bash_scripts/06_run_evaluation_mr_measurements.sh` first.
+Please change the name of the raw MR data files in `scripts/bash_scripts/06_run_evaluation_mr_measurements.sh` (phantom experiment) and  `scripts/bash_scripts/06_run_evaluation_mr_measurements_liver.sh` (ex vivo experiment) first.
 
 ## Resources
 [1] Russakovsky O, Deng J, Su H, Krause J, Satheesh S, Ma S, et al. Imagenet large scale visual recognition challenge. Int J Comput Vis. 2015;115:211-52.

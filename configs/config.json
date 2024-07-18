@@ -11,8 +11,6 @@
     "learning_rate": 0.00001,
     "num_epochs": 2000,
 
-    "selected_coils_list": [0, 3, 9, 10, 12, 13, 14, 15],
-
     "path_to_images": "/imagenet_2012/",
     "path_to_data": "/path_to_synthetic_data/",
     "path_to_save": "/path_to_results/",

@@ -48,6 +48,7 @@ def main(
     orientation: int,
     selected_coils_list: List[int],
     warm_up: bool,
+    num_repeat: int,
     seed: int,
 ):
     """Evaluate reconstruction approach on k-space measurements."""
@@ -74,30 +75,33 @@ def main(
     else:
         path_traj_bart = define_path_to_radial_trajectory(path_to_data, num_spokes)
 
-        path_to_sensitivity_map_folder = define_folder_name(
-            path_to_save, 'mri_measurements', 'sensitivity_map'
-        )
-        make_directory(path_to_sensitivity_map_folder)
+        # Save a constant sensitivity map for warm up of compressed sensing
+        if method == 'CS':
+            if warm_up:
+                path_to_sensitivity_map_folder = define_folder_name(
+                    path_to_save, 'mri_measurements', 'sensitivity_map'
+                )
+                make_directory(path_to_sensitivity_map_folder)
 
-        if num_coils == 1:
-            path_to_sensitivity_map = os.path.join(
-                path_to_sensitivity_map_folder, 'sensitivity_map_bart'
-            )
-            save_sensitivity_map_bart(im_w, path_to_sensitivity_map)
+                if num_coils == 1:
+                    path_to_sensitivity_map = os.path.join(
+                        path_to_sensitivity_map_folder, 'sensitivity_map_bart'
+                    )
+                    save_sensitivity_map_bart(im_w, path_to_sensitivity_map)
 
-        else:
-            path_to_sensitivity_map = os.path.join(
-                path_to_sensitivity_map_folder,
-                'sensitivity_map_bart' + '_' + str(num_coils) + '_coils',
-            )
+                else:
+                    path_to_sensitivity_map = os.path.join(
+                        path_to_sensitivity_map_folder,
+                        'sensitivity_map_bart' + '_' + str(num_coils) + '_coils',
+                    )
 
-            save_sensitivity_map_bart_coils(im_w, num_coils, path_to_sensitivity_map)
+                    save_sensitivity_map_bart_coils(
+                        im_w, num_coils, path_to_sensitivity_map
+                    )
+            else:
+                path_to_sensitivity_map = None
 
     timer = select_timer(device)
-
-    reconstruction_mr_measurements = ReconstructionMRMeasurements(
-        num_spokes, num_readouts, im_w, k_w, num_coils
-    )
 
     normalization_factor = find_normalization_factor(
         path_to_normalization_factor_csv, num_spokes
@@ -113,6 +117,10 @@ def main(
         method,
         im_w,
         normalization_factor,
+    )
+
+    reconstruction_mr_measurements = ReconstructionMRMeasurements(
+        num_spokes, num_readouts, im_w, k_w, num_coils, num_repeat
     )
 
     if method == 'ML':
@@ -165,7 +173,7 @@ def main(
             path_to_sensitivity_map,
             stepsize,
         )
-    else:
+    elif method == 'nufft_adjoint':
         (
             reconstruction,
             time_list,
@@ -191,6 +199,7 @@ def main(
         orientation,
         time_list,
         path_to_save_results,
+        image_number,
         subfolder_name,
     )
 
@@ -210,7 +219,7 @@ if __name__ == '__main__':
         '--method',
         required=True,
         type=str,
-        choices=['ML', 'CS', 'nufft_adjoint', 'nufft_inverse'],
+        choices=['ML', 'CS', 'nufft_adjoint'],
         help='Name of method that should be evaluated',
     )
     parser.add_argument(
@@ -224,7 +233,7 @@ if __name__ == '__main__':
         '--filename',
         required=True,
         type=str,
-        help='What is filename of the k-space data?',
+        help='Filename of the k-space measurements',
     )
     parser.add_argument(
         '--image_number',
@@ -306,6 +315,20 @@ if __name__ == '__main__':
         help='Name of folder where ML model was saved',
     )
 
+    parser.add_argument(
+        '--selected_coils_list',
+        required=True,
+        help='List of coils for the reconstruction',
+    )
+
+    parser.add_argument(
+        '--num_repeat',
+        required=True,
+        type=int,
+        default=1,
+        help='How often reconstruction is repeated',
+    )
+
     parser.add_argument('--warm_up', action='store_true')
 
     # parse arguments
@@ -327,6 +350,9 @@ if __name__ == '__main__':
         args,
         config,
     )
+
+    selected_coils_list = args.selected_coils_list.split(',')
+    selected_coils_list_int = [int(i) for i in selected_coils_list]
 
     main(
         num_spokes=args.num_spokes,
@@ -350,7 +376,8 @@ if __name__ == '__main__':
         filename=args.filename,
         image_number=args.image_number,
         orientation=args.orientation,
-        selected_coils_list=config['selected_coils_list'],
+        selected_coils_list=selected_coils_list_int,
         warm_up=args.warm_up,
+        num_repeat=args.num_repeat,
         seed=config['seed'],
     )
