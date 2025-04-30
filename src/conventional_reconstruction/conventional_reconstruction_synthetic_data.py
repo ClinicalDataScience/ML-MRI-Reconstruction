@@ -23,9 +23,7 @@ def scale_nufft_adjoint(
 ) -> np.ndarray:
     """Scale reconstruction after adjoint NUFFT."""
     us = (im_w / 2 * np.pi) / num_spokes
-    reconstruction = (
-        reconstruction / (im_w * 4 * (np.pi / 2)) * us * 128
-    )  # normalization factor for im_w = 128
+    reconstruction = reconstruction / (im_w * 4 * (np.pi / 2)) * us * im_w
     return reconstruction
 
 
@@ -46,8 +44,11 @@ def postprocessing_bart_single_image(
 ) -> np.ndarray:
     """Postprocess image after reconstruction with BART."""
     reconstruction = readcfl(path_to_recon_image)
-    if method == 'nufft_adjoint' and num_spokes and im_w:
-        reconstruction = scale_nufft_adjoint(reconstruction, num_spokes, im_w)
+    if method == 'nufft_adjoint':
+        if num_spokes is not None and im_w is not None:
+            reconstruction = scale_nufft_adjoint(reconstruction, num_spokes, im_w)
+        else:
+            raise Exception(f'num_spokes {num_spokes} or im_w {im_w} is None.')
     reconstruction = np.abs(reconstruction)
     return reconstruction
 
@@ -62,15 +63,19 @@ def reconstruct_synthetic_k_space_data_with_bart(
     dens_correction_nufft_adjoint: Optional[np.ndarray] = None,
 ) -> np.ndarray:
     """Reconstruct image with BART."""
-    if (
-        method == 'nufft_adjoint'
-        and path_to_k_space is not None
-        and dens_correction_nufft_adjoint is not None
-        and im_w is not None
-    ):
-        apply_density_correction_for_nufft_adjoint(
-            path_to_k_space, dens_correction_nufft_adjoint
-        )
+    if method == 'nufft_adjoint':
+        if (
+            path_to_k_space is not None
+            and dens_correction_nufft_adjoint is not None
+            and im_w is not None
+        ):
+            apply_density_correction_for_nufft_adjoint(
+                path_to_k_space, dens_correction_nufft_adjoint
+            )
+        else:
+            raise Exception(
+                f'path_to_k_space {path_to_k_space} or dens_correction_nufft_adjoint {dens_correction_nufft_adjoint} or im_w {im_w} is None'
+            )
     subprocess.run(split(cmp), shell=False, check=True)
     reconstruction = postprocessing_bart_single_image(
         method, path_to_recon_image, num_spokes, im_w

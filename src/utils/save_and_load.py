@@ -138,27 +138,27 @@ def writecfl(name: str, array: np.ndarray) -> None:
     Write cfl file.
 
     Source: https://github.com/mrirecon/bart/blob/master/python/cfl.py
-    
+
     Use of this source code is governed by a BSD-3-Clause license.
-    
+
     Copyright (c) 2013-2018. The Regents of the University of California.
     Copyright (c) 2013-2024. BART Developer Team and Contributors.
     All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
-    
+
     1. Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
-    
+
     2. Redistributions in binary form must reproduce the above copyright notice,
     this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
-    
+
     3. Neither the name of the copyright holder nor the names of its contributors
     may be used to endorse or promote products derived from this software without
     specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -190,27 +190,27 @@ def readcfl(name: str) -> np.ndarray:
     Read cfl file.
 
     Source: https://github.com/mrirecon/bart/blob/master/python/cfl.py
-    
+
     Use of this source code is governed by a BSD-3-Clause license.
-    
+
     Copyright (c) 2013-2018. The Regents of the University of California.
     Copyright (c) 2013-2024. BART Developer Team and Contributors.
     All rights reserved.
-    
+
     Redistribution and use in source and binary forms, with or without
     modification, are permitted provided that the following conditions are met:
-    
+
     1. Redistributions of source code must retain the above copyright notice, this
     list of conditions and the following disclaimer.
-    
+
     2. Redistributions in binary form must reproduce the above copyright notice,
     this list of conditions and the following disclaimer in the documentation
     and/or other materials provided with the distribution.
-    
+
     3. Neither the name of the copyright holder nor the names of its contributors
     may be used to endorse or promote products derived from this software without
     specific prior written permission.
-    
+
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
     ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
     WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -387,9 +387,16 @@ def define_save_name_evaluation_synthetic_data(
 
 
 def define_save_name_results_mri_measurements(
-    method: str, device: str, orientation: int, num_spokes: int, image_number: int
+    filename: str,
+    method: str,
+    device: str,
+    orientation: int,
+    num_spokes: int,
+    image_number: Union[int, str],
 ) -> str:
     """Define the filename for the results of the reconstruction for k-space measurements data."""
+    if filename.endswith(('.dat')):
+        filename = filename[:-4]
     save_name = (
         method
         + '_'
@@ -397,7 +404,7 @@ def define_save_name_results_mri_measurements(
         + '_'
         + device
         + '_'
-        + 'reconstruction_gre_magnitude'
+        + str(filename)
         + '_'
         + 'orientation'
         + '_'

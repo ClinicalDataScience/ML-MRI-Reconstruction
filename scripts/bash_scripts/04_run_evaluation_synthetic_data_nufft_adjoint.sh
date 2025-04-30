@@ -2,18 +2,10 @@
 
 export config_name=$1
 export num_spokes=$2
+
 export reconstruction_method='nufft_adjoint'
-
-list_reconstruction_devices=( 'cpu'
-                              'cuda'
-)
-
-export subfolder_name='standard'
-for reconstruction_device in "${list_reconstruction_devices[@]}" ; do
-    python -m scripts.05_evaluation_synthetic_data --config_file_name $config_name --num_spokes $number_of_spokes --method $reconstruction_method --device $reconstruction_device --subfolder_name $subfolder_name --warm_up
-
-done
-
 export reconstruction_device='cpu'
-export subfolder_name_noise='noise'
-python -m scripts.05_evaluation_synthetic_data --config_file_name $config_name --num_spokes $number_of_spokes --method $reconstruction_method --device $reconstruction_device --subfolder_name $subfolder_name_noise --warm_up
+
+python -m scripts.04_evaluation_synthetic_data --config_file_name $config_name --num_spokes $num_spokes --method $reconstruction_method --traj_variant $traj_variant --traj_angle $traj_angle --traj_shift $traj_shift --traj_isotropy $traj_isotropy --device $reconstruction_device --subfolder_name 'standard' --warm_up
+
+python -m scripts.04_evaluation_synthetic_data --config_file_name $config_name --num_spokes $num_spokes --method $reconstruction_method --traj_variant $traj_variant --traj_angle $traj_angle --traj_shift $traj_shift --traj_isotropy $traj_isotropy --device $reconstruction_device --subfolder_name 'noise' --warm_up

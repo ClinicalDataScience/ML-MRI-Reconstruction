@@ -7,10 +7,8 @@ from pathlib import Path
 from typing import Union
 
 import torch
-from src.machine_learning.dataset.custom_dataset import (
-    CustomDataset,
-    find_normalization_factor,
-)
+import torch.nn as nn
+from src.machine_learning.dataset.custom_dataset import CustomDataset
 from src.machine_learning.model.model_fc import LinearFCNetwork
 from src.machine_learning.training.model_trainer import Trainer
 from src.utils import set_seed
@@ -29,23 +27,22 @@ def main(
     im_w: int,
     device: str,
     path_to_data: Union[str, os.PathLike],
-    path_to_normalization_factor_csv: Union[str, os.PathLike],
     path_to_split_csv: Union[str, os.PathLike],
     path_to_save: Union[str, os.PathLike],
     batch_size: int,
     learning_rate: float,
     weight_decay: float,
-    num_spokes_dropout: int,
+    dropout: int,
     num_epochs: int,
     model_name: str,
     folder_name_ml_model: str,
     subfolder_name: str,
     optimizer_name: str,
+    noise_level: float,
     seed: int,
 ) -> None:
     """Train machine learning reconstruction model."""
     torch.cuda.empty_cache()
-
     set_seed.seed_all(seed)
 
     path_to_save_ML_model = define_ML_model_folder_name(
@@ -61,12 +58,11 @@ def main(
 
     model_fc = model_fc.to(device)
 
-    normalization_factor = find_normalization_factor(
-        path_to_normalization_factor_csv, num_spokes
-    )
+    normalization_factor = im_w**2
 
     filelist_train = define_samples_in_dataset(path_to_split_csv, 'train')
     filelist_validation = define_samples_in_dataset(path_to_split_csv, 'validation')
+
     dataset_train = CustomDataset(
         path_to_data, num_spokes, filelist_train, normalization_factor, subfolder_name
     )
@@ -89,9 +85,10 @@ def main(
         batch_size,
         learning_rate,
         weight_decay,
-        num_spokes_dropout,
+        dropout,
         num_epochs,
         path_to_save_ML_model,
+        noise_level,
         seed,
     )
     trainer.train_and_validate(
@@ -147,6 +144,13 @@ if __name__ == '__main__':
         type=float,
         help='Weight decay',
     )
+    parser.add_argument(
+        '--noise_level',
+        required=False,
+        default=0,
+        type=float,
+        help='Noise level for training',
+    )
 
     parser.add_argument(
         '--folder_name_ml_model',
@@ -157,11 +161,11 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
-        '--num_spokes_dropout',
+        '--dropout',
         required=False,
-        default=None,
-        type=int,
-        help='Number of spokes for dropout during training',
+        default=0,
+        type=float,
+        help='Number of spokes for dropout or percentage spokes for dropout during training',
     )
 
     parser.add_argument(
@@ -169,7 +173,7 @@ if __name__ == '__main__':
         required=False,
         default='radial_k',
         type=str,
-        help='Name of folder where the k-space data should be saved',
+        help='Name of folder where the k-space data is saved',
     )
 
     args = parser.parse_args()
@@ -186,19 +190,17 @@ if __name__ == '__main__':
         im_w=config['im_w'],
         device=args.device,
         path_to_data=Path(config['path_to_data']),
-        path_to_normalization_factor_csv=Path(
-            config['path_to_normalization_factor_csv']
-        ),
         path_to_split_csv=Path(config['path_to_split_csv']),
         path_to_save=Path(config['path_to_save']),
         batch_size=args.batch_size,
         learning_rate=config['learning_rate'],
         weight_decay=args.weight_decay,
-        num_spokes_dropout=args.num_spokes_dropout,
+        dropout=args.dropout,
         num_epochs=config['num_epochs'],
         model_name=args.model_name,
         folder_name_ml_model=args.folder_name_ml_model,
         subfolder_name=args.subfolder_name,
         optimizer_name=args.optimizer_name,
+        noise_level=args.noise_level,
         seed=config['seed'],
     )

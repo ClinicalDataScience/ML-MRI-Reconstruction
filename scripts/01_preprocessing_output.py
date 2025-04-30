@@ -86,6 +86,7 @@ def generate_complex_valued_output_for_full_dataset(
 
         h = hashlib.md5(image).hexdigest()
         if h in hash_dict:
+            print(f'Skipped image {filename}.')
             continue
         hash_dict[h] = filename
 
@@ -116,6 +117,7 @@ def main(
     """Generate complex-valued synthetic data from natural images."""
     set_seed.seed_all(seed)
     rng_seed = np.random.default_rng(seed)
+    hash_dict = dict()  #  type: Dict[str, str]
 
     path_to_ground_truth = Path(os.path.join(path_to_data, 'complex_image'))
     make_directory(path_to_ground_truth)
@@ -124,29 +126,54 @@ def main(
     path_to_train_val_images = Path(os.path.join(path_to_images, 'train/'))
     path_to_test_images = Path(os.path.join(path_to_images, 'val/'))
 
-    filelist_train_val = list_files_in_directory(path_to_train_val_images, 'JPEG')
-    filelist_test = list_files_in_directory(path_to_test_images, 'JPEG')
-
     # data for train and validation set
-    hash_dict = dict()  #  type: Dict[str, str]
-    train_val_names, hash_dict = generate_complex_valued_output_for_full_dataset(
-        hash_dict,
-        filelist_train_val,
-        path_to_train_val_images,
-        path_to_ground_truth,
-        train_set_size + validation_set_size,
-        im_w,
-        rng_seed,
-    )
-    test_names, hash_dict = generate_complex_valued_output_for_full_dataset(
-        hash_dict,
-        filelist_test,
-        path_to_test_images,
-        path_to_ground_truth,
-        test_set_size,
-        im_w,
-        rng_seed,
-    )
+    if os.path.exists(path_to_train_val_images):
+        filelist_train_val = list_files_in_directory(path_to_train_val_images, 'JPEG')
+    else:
+        filelist_train_val = []
+
+    if len(filelist_train_val) > 0:
+        train_val_names, hash_dict = generate_complex_valued_output_for_full_dataset(
+            hash_dict,
+            filelist_train_val,
+            path_to_train_val_images,
+            path_to_ground_truth,
+            train_set_size + validation_set_size,
+            im_w,
+            rng_seed,
+        )
+    else:
+        train_val_names = []
+
+    # data for test set
+    if os.path.exists(path_to_test_images):
+        filelist_test = list_files_in_directory(path_to_test_images, 'JPEG')
+
+        start_image_in_test_set = 1500
+        if len(filelist_test) >= start_image_in_test_set:
+            for filename in tqdm(filelist_test[:start_image_in_test_set]):
+                directory = os.path.join(path_to_test_images, filename)
+                image = mpimg.imread(directory)
+                h = hashlib.md5(image).hexdigest()
+                hash_dict[h] = filename
+            filelist_test = filelist_test[start_image_in_test_set:]
+        else:
+            filelist_test = filelist_test
+    else:
+        filelist_test = list_files_in_directory(path_to_images, 'JPEG')
+
+    if len(filelist_test) > 0:
+        test_names, hash_dict = generate_complex_valued_output_for_full_dataset(
+            hash_dict,
+            filelist_test,
+            path_to_test_images,
+            path_to_ground_truth,
+            test_set_size,
+            im_w,
+            rng_seed,
+        )
+    else:
+        test_names = []
 
     split_dataset(
         train_val_names,

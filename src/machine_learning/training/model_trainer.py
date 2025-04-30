@@ -7,15 +7,13 @@ from typing import Union
 
 import numpy as np
 import torch
-from src.machine_learning.inference.ml_reconstruction_inference_utils import (
-    calculate_normalization_factor,
-)
 from src.machine_learning.training.helpers.early_stopping import EarlyStopping
 from src.machine_learning.training.helpers.save_best_model import SaveBestModel
 from src.utils import set_seed
 from src.utils.time_measurements import select_timer
 from torch import Tensor
 from torch.nn import MSELoss
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -35,9 +33,10 @@ class Trainer:
         batch_size: int,
         learning_rate: float,
         weight_decay: float,
-        num_spokes_dropout: int,
+        dropout: int,
         num_epochs: int,
         path_to_save_ML_model: Union[str, os.PathLike],
+        noise_level: float,
         seed: int,
     ) -> None:
         """Initialize Trainer."""
@@ -49,15 +48,20 @@ class Trainer:
         self.batch_size = batch_size
         self.device = device
         self.learning_rate = learning_rate
-        self.num_spokes_dropout = num_spokes_dropout
-        if self.num_spokes_dropout is not None:
-            self.normalization_spoke_dropout = calculate_normalization_factor(
-                self.num_spokes, self.num_spokes_dropout
-            )
+        self.dropout = dropout
+
+        self.n_dropout = self.calculate_num_spokes_dropout()
+        if self.n_dropout != 0:
+            print(f'Number of spokes used for dropout {self.n_dropout}')
+            self.normalization_spoke_dropout = self.calculate_normalization_factor()
 
         if optimizer_name == 'Adam':
             self.optimizer = torch.optim.Adam(
-                self.model.parameters(), self.learning_rate, weight_decay=weight_decay
+                self.model.parameters(),
+                self.learning_rate,
+                betas=(0.9, 0.98),
+                weight_decay=weight_decay,
+                eps=1e-09,
             )
         elif optimizer_name == 'SGD':
             self.optimizer = torch.optim.SGD(
@@ -67,20 +71,42 @@ class Trainer:
             logging.warning('This optimizer is not defined.')
             sys.exit('This optimizer is not defined.')
 
+        self.scheduler = ReduceLROnPlateau(
+            self.optimizer, patience=5, factor=0.8, eps=1e-10
+        )
         self.loss_metric = MSELoss()
         self.num_epochs = num_epochs
         self.path_to_save_ML_model = path_to_save_ML_model
         self.seed = seed
+        self.noise_level = noise_level
+
+    def calculate_num_spokes_dropout(self):
+        """Calculate number of spokes for dropout."""
+        if self.dropout > 0:
+            if self.dropout >= 1:  # use as absolute number of spokes to drop
+                n_dropout = int(np.round(self.dropout))
+            else:  # use as fraction of spokes to drop (but at least 1)
+                n_dropout = max(1, int(np.round(self.dropout * self.num_spokes)))
+            n_dropout = min(self.num_spokes - 1, n_dropout)
+        else:
+            n_dropout = 0
+        return n_dropout
+
+    def calculate_normalization_factor(self):
+        """Calculate normalization factor for the input data during training for the reconstructions with the machine learning model."""
+        normalization_spoke_dropout = (
+            self.num_spokes - self.n_dropout
+        ) / self.num_spokes
+        return normalization_spoke_dropout
 
     def spoke_dropout(
         self,
         X: Tensor,
     ) -> Tensor:
         """Set a few random spokes in input tensor to zero."""
-        # set random spokes in each batch to zero
         for j in range(X.shape[0]):
             # define which spokes should be set to zero
-            a = random.sample(range(0, self.num_spokes), self.num_spokes_dropout)
+            a = random.sample(range(0, self.num_spokes), self.n_dropout)
             for i in range(len(a)):
                 X[j, :, a[i] * self.num_readouts : (a[i] + 1) * self.num_readouts] = 0
         return X
@@ -99,9 +125,16 @@ class Trainer:
         X = X.to(self.device)
         y = y.to(self.device)
 
+        if self.noise_level != 0:
+            uniform_dist = torch.distributions.uniform.Uniform(
+                1.0 - self.noise_level, 1.0 + self.noise_level
+            )
+            X = torch.multiply(X, uniform_dist.sample(X.shape).to(self.device))
+
         # set the k-space values of multiple spokes to 0
-        if self.num_spokes_dropout is not None:
+        if self.n_dropout != 0:
             X = self.spoke_dropout(X)
+            y *= self.normalization_spoke_dropout
 
         predictions = self.model(X)
         loss = self.calculate_loss(y, predictions)
@@ -121,11 +154,8 @@ class Trainer:
         X = X.to(self.device)
         y = y.to(self.device)
 
-        # normalize input for validation
-        if self.num_spokes_dropout is not None:
-            X = X * self.normalization_spoke_dropout
-
         predictions = self.model(X)
+
         loss = self.loss_metric(y, predictions)
         return loss.item()
 
@@ -182,7 +212,6 @@ class Trainer:
         validation_loss_epoch_list = []
 
         timer = select_timer(self.device)
-
         with timer:
             for epoch in tqdm(range(self.num_epochs)):
                 train_loss_add = 0
@@ -208,11 +237,18 @@ class Trainer:
                     dataloader_validation.dataset
                 )
                 validation_loss_epoch_list.append(validation_loss_epoch)
+                self.scheduler.step(validation_loss_epoch)
 
                 logging.info(
-                    'Epoch {}: Train loss: {}, Validation loss: {}'.format(
-                        epoch, train_loss_epoch, validation_loss_epoch
+                    'Epoch {}: Train loss: {}, Validation loss: {}, Current learning rate: {}'.format(
+                        epoch + 1,
+                        train_loss_epoch,
+                        validation_loss_epoch,
+                        self.optimizer.param_groups[0]['lr'],
                     )
+                )
+                print(
+                    f'Epoch {epoch + 1}: Train loss: {train_loss_epoch}, Validation loss: {validation_loss_epoch}'
                 )
 
                 save_best_model(

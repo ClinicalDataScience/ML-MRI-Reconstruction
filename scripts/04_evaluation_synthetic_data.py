@@ -3,18 +3,23 @@ import argparse
 import logging
 import os
 import sys
-from statistics import median
 
 import torch
-from src.evaluation.reconstruct_synthetic_data import EvaluationSyntheticData
-from src.machine_learning.dataset.custom_dataset import find_normalization_factor
+from src.conventional_reconstruction.conventional_reconstruction_utils import (
+    save_radial_trajectory_bart,
+)
+from src.evaluation.reconstruct_synthetic_data import (
+    evaluate_compressed_sensing_reconstruction_synthetic_data,
+    evaluate_ml_model,
+    evaluate_nufft_reconstruction_synthetic_data,
+    save_evaluation,
+)
 from src.utils import set_seed
 from src.utils.dataset import define_samples_in_dataset, make_dataset
 from src.utils.logging_functions import set_up_logging_and_save_args_and_config
 from src.utils.save_and_load import (
     define_directory_to_save_evaluation,
     define_directory_to_save_reconstruction,
-    define_folder_name,
     define_ML_model_folder_name,
     define_path_to_radial_trajectory,
     define_path_to_sensitivity_map,
@@ -31,8 +36,11 @@ def main(
     num_readouts: int,
     im_w: int,
     k_w: int,
+    traj_variant: str,
+    traj_angle: int,
+    traj_shift: int,
+    traj_isotropy: int,
     model_name: str,
-    num_spokes_dropout: int,
     bart_regularization_option: str,
     bart_maxiter: int,
     bart_regularization: float,
@@ -42,7 +50,6 @@ def main(
     path_to_save: str,
     subfolder_name: str,
     folder_name_ml_model: str,
-    path_to_normalization_factor_csv: str,
     path_to_split_csv: str,
     warm_up: bool,
     seed: int,
@@ -58,14 +65,20 @@ def main(
             path_to_save, 'ML_model', folder_name_ml_model, num_spokes
         )
 
-        normalization_factor = find_normalization_factor(
-            path_to_normalization_factor_csv, num_spokes
-        )
     else:
         path_to_sensitivity_map = define_path_to_sensitivity_map(path_to_data)
 
         path_to_radial_trajectory_bart = define_path_to_radial_trajectory(
             path_to_data, num_spokes
+        )
+        save_radial_trajectory_bart(
+            num_spokes,
+            num_readouts,
+            traj_variant,
+            traj_angle,
+            traj_shift,
+            traj_isotropy,
+            path_to_radial_trajectory_bart,
         )
 
     filelist_test = define_samples_in_dataset(path_to_split_csv, 'test')
@@ -91,26 +104,28 @@ def main(
     make_directory(path_to_save_results_reconstruction)
     make_directory(path_to_save_results_evaluation)
 
-    evaluation_synthetic_data = EvaluationSyntheticData(num_spokes, num_readouts, im_w)
-
     if method == 'ML':
-        time_list, MSE_list, SSIM_list = evaluation_synthetic_data.evaluate_ml_model(
+        time_list, MSE_list, SSIM_list = evaluate_ml_model(
+            num_spokes,
+            num_readouts,
+            im_w,
             device,
             dataset_test,
-            normalization_factor,
             model_name,
             path_to_save_results_reconstruction,
             path_to_save_ML_model,
             timer,
-            num_spokes_dropout,
             warm_up,
         )
-    elif method == 'nufft_adjoint':
+    elif method == 'nufft_adjoint' or method == 'nufft_inverse':
         (
             time_list,
             MSE_list,
             SSIM_list,
-        ) = evaluation_synthetic_data.evaluate_bart_reconstruction(
+        ) = evaluate_nufft_reconstruction_synthetic_data(
+            num_spokes,
+            num_readouts,
+            im_w,
             method,
             device,
             dataset_test,
@@ -118,14 +133,20 @@ def main(
             path_to_radial_trajectory_bart,
             timer,
             warm_up,
+            traj_variant,
+            traj_angle,
+            traj_shift,
+            traj_isotropy,
         )
     elif method == 'CS':
         (
             time_list,
             MSE_list,
             SSIM_list,
-        ) = evaluation_synthetic_data.evaluate_bart_reconstruction(
-            method,
+        ) = evaluate_compressed_sensing_reconstruction_synthetic_data(
+            num_spokes,
+            num_readouts,
+            im_w,
             device,
             dataset_test,
             path_to_save_results_reconstruction,
@@ -140,16 +161,21 @@ def main(
             stepsize,
         )
 
-    evaluation_synthetic_data.save_evaluation(
-        method, device, 'time', time_list, path_to_save_results_evaluation
+    save_evaluation(
+        method, num_spokes, device, 'time', time_list, path_to_save_results_evaluation
     )
 
     if device == 'cpu':
-        evaluation_synthetic_data.save_evaluation(
-            method, device, 'MSE', MSE_list, path_to_save_results_evaluation
+        save_evaluation(
+            method, num_spokes, device, 'MSE', MSE_list, path_to_save_results_evaluation
         )
-        evaluation_synthetic_data.save_evaluation(
-            method, device, 'SSIM', SSIM_list, path_to_save_results_evaluation
+        save_evaluation(
+            method,
+            num_spokes,
+            device,
+            'SSIM',
+            SSIM_list,
+            path_to_save_results_evaluation,
         )
 
 
@@ -164,6 +190,40 @@ if __name__ == '__main__':
         type=int,
         help='Number of spokes in radial k-space',
     )
+
+    parser.add_argument(
+        '--traj_variant',
+        type=str,
+        choices=['radial'],
+        required=False,
+        default='radial',
+        help='trajectory variant',
+    )
+
+    parser.add_argument(
+        '--traj_angle',
+        type=float,
+        default=180,
+        required=False,
+        help='trajectory: maximum rotation angle of spokes',
+    )
+
+    parser.add_argument(
+        '--traj_shift',
+        type=float,
+        default=0.0,
+        required=False,
+        help='trajectory: small rotation by fraction of spoke angle',
+    )
+
+    parser.add_argument(
+        '--traj_isotropy',
+        type=float,
+        default=1.0,
+        required=False,
+        help='trajectory: isotropic: p=1.0, else phi = atan(p * tan(phi0))',
+    )
+
     parser.add_argument(
         '--method',
         required=True,
@@ -244,14 +304,6 @@ if __name__ == '__main__':
         help='Name of folder where the results should be saved and where the k-space data was saved',
     )
 
-    parser.add_argument(
-        '--num_spokes_dropout',
-        required=False,
-        default=0,
-        type=int,
-        help='Number of spokes for dropout during training of the machine learning model',
-    )
-
     parser.add_argument('--warm_up', action='store_true')
 
     # parse arguments
@@ -287,8 +339,11 @@ if __name__ == '__main__':
         num_readouts=config['num_readouts'],
         im_w=config['im_w'],
         k_w=config['k_w'],
+        traj_variant=args.traj_variant,
+        traj_angle=args.traj_angle,
+        traj_shift=args.traj_shift,
+        traj_isotropy=args.traj_isotropy,
         model_name=args.model_name,
-        num_spokes_dropout=args.num_spokes_dropout,
         bart_regularization_option=args.bart_regularization_option,
         bart_maxiter=args.maxiter,
         bart_regularization=args.bart_regularization,
@@ -298,7 +353,6 @@ if __name__ == '__main__':
         path_to_save=config['path_to_save'],
         subfolder_name=args.subfolder_name,
         folder_name_ml_model=args.folder_name_ml_model,
-        path_to_normalization_factor_csv=config['path_to_normalization_factor_csv'],
         path_to_split_csv=config['path_to_split_csv'],
         warm_up=args.warm_up,
         seed=config['seed'],

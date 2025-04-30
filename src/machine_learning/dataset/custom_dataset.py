@@ -18,22 +18,6 @@ from torch import Tensor
 from torch.utils.data import Dataset
 
 
-def find_normalization_factor(
-    path_to_normalization_factor_csv: Union[str, os.PathLike], num_spokes: int
-) -> float:
-    """Read the csv file where the normalization factors are saved and identify the correct one."""
-    # read csv file where normalization factors are saved
-    df = pd.read_csv(
-        os.path.join(path_to_normalization_factor_csv, 'normalization_factor.csv')
-    )
-    # idenfity correct normalization factor based on number of spokes
-    normalization_factor = df.loc[df['num_spokes'] == num_spokes][
-        'normalization_factor'
-    ]
-    normalization_factor = float(normalization_factor.values)
-    return normalization_factor
-
-
 class CustomDataset(Dataset):
     """Build a dataset of synthetic data for this project."""
 

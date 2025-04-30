@@ -8,13 +8,12 @@
     "validation_set_size": 50000,
     "test_set_size": 1000,
 
-    "learning_rate": 0.00001,
+    "learning_rate": 0.000005,
     "num_epochs": 2000,
 
     "path_to_images": "/imagenet_2012/",
     "path_to_data": "/path_to_synthetic_data/",
     "path_to_save": "/path_to_results/",
-    "path_to_normalization_factor_csv":"/path_to_normalization_factor_csv/",
     "path_to_split_csv":"/path_to_data_split_csv/",
     "path_to_measurements": "/path_to_mr_measurements/",
 

@@ -87,6 +87,18 @@ def reconstruct_k_space_measurements_with_nufft_adjoint(
     return reconstruction
 
 
+def reconstruct_k_space_measurements_with_nufft_inverse(
+    cmp: str,
+    path_to_recon_image: Union[str, os.PathLike],
+) -> np.ndarray:
+    """Reconstruct k-space measurement with NUFFT."""
+    subprocess.run(split(cmp), shell=False, check=True)
+    reconstruction = postprocessing_bart_measurements(
+        'nufft_inverse', path_to_recon_image
+    )
+    return reconstruction
+
+
 def reconstruct_k_space_measurements_with_compressed_sensing(
     cmp: str,
     path_to_recon_image: Union[str, os.PathLike],

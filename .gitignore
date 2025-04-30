@@ -6,7 +6,8 @@
 
 !__init__.py
 !configs/
-!configs/config.json
+!configs/config_uniform.json
+!configs/config_nonuniform.json
 !scripts/
 !scripts/*.py
 !scripts/bash_scripts/

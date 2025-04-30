@@ -71,9 +71,3 @@ def warm_up_ml(
     ).to(device)
     for _ in range(100):
         _ = model(dummy_input)
-
-
-def calculate_normalization_factor(num_spokes: int, num_spokes_dropout: int):
-    """Calculate normalization factor for the input data during validation/testing for the reconstructions with the machine learning model."""
-    normalization_spoke_dropout = (num_spokes - num_spokes_dropout) / num_spokes
-    return normalization_spoke_dropout

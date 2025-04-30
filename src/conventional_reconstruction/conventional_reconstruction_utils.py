@@ -5,15 +5,21 @@ from typing import Optional, Union
 
 import numpy as np
 from src.utils.save_and_load import writecfl
-from src.utils.trajectory import define_radial_trajectory
+from src.utils.trajectory import define_trajectory
 
 
 def define_trajectory_bart(
     num_spokes: int,
     num_readouts: int,
+    traj_variant: str,
+    traj_angle: int,
+    traj_shift: int,
+    traj_isotropy: int,
 ) -> np.ndarray:
     """Reshape radial trajectory to the shape that is required by BART."""
-    traj = define_radial_trajectory(num_spokes, num_readouts)
+    traj = define_trajectory(
+        num_spokes, num_readouts, traj_variant, traj_angle, traj_shift, traj_isotropy
+    )
     traj_bart = np.zeros((traj.shape[0], 3), dtype=traj.dtype)
     traj_bart[:, :2] = traj / np.pi * (num_readouts // 4)
     traj_bart = traj_bart.reshape((num_spokes, num_readouts, 3))
@@ -21,11 +27,58 @@ def define_trajectory_bart(
     return traj_bart
 
 
+def calculate_density_correction(
+    num_spokes: int,
+    num_readouts: int,
+    traj_variant: str,
+    traj_angle: int,
+    traj_shift: int,
+    traj_isotropy: int,
+    im_w: int,
+    num_coils: Optional[int] = None,
+) -> np.ndarray:
+    """Calculate density correction for adjoint NUFFT reconstruction."""
+    bart_norm_factor_of_traj = np.pi / (num_readouts // 4)
+    traj_bart_rescaled = (
+        define_trajectory_bart(
+            num_spokes,
+            num_readouts,
+            traj_variant,
+            traj_angle,
+            traj_shift,
+            traj_isotropy,
+        )
+        * bart_norm_factor_of_traj
+    )
+
+    os_radread = 2
+    dens0 = 0.98 / np.sqrt(np.pi * im_w * im_w) * (2 / os_radread) ** 1.1
+    dens_corr_fn = lambda tra: (dens0**4 + np.sum(tra**2, axis=0) ** 2) ** 0.25
+    dens_correction_nufft_adjoint = dens_corr_fn(traj_bart_rescaled)
+
+    if num_coils is not None:
+        dens_correction_nufft_adjoint = np.repeat(
+            dens_correction_nufft_adjoint[:, :, np.newaxis],
+            num_coils,
+            axis=-1,
+        )
+
+    return dens_correction_nufft_adjoint
+
+
 def save_radial_trajectory_bart(
-    num_spokes: int, num_readouts: int, path_to_radial_trajectory_bart: str
+    num_spokes: int,
+    num_readouts: int,
+    traj_variant: str,
+    traj_angle: int,
+    traj_shift: int,
+    traj_isotropy: int,
+    path_to_radial_trajectory_bart: str,
 ) -> None:
     """Save the radial trajectory for the BART reconstruction."""
-    traj_bart = define_trajectory_bart(num_spokes, num_readouts)
+    traj_bart = define_trajectory_bart(
+        num_spokes, num_readouts, traj_variant, traj_angle, traj_shift, traj_isotropy
+    )
     writecfl(path_to_radial_trajectory_bart, traj_bart)
 
 
@@ -56,9 +109,7 @@ def return_command_for_nufft_reconstruction_bart(
     if method == 'nufft_adjoint':
         cmp = f'bart nufft -a {path_traj_bart} {path_to_save_kspace} {path_to_recon_image}'
     elif method == 'nufft_inverse':
-        cmp = f'bart nufft -i {path_traj_bart} {path_to_save_kspace} {path_to_recon_image}'
-
-    # if device is cuda: add -g flag
+        cmp = f'bart nufft -i  {path_traj_bart} {path_to_save_kspace} {path_to_recon_image}'
     if device == 'cuda':
         if method == 'nufft_adjoint':
             substr = '-a'
@@ -67,7 +118,6 @@ def return_command_for_nufft_reconstruction_bart(
         inserttxt = '-g '
         idx = cmp.index(substr)
         cmp = cmp[:idx] + inserttxt + cmp[idx:]
-
     return cmp
 
 
@@ -102,7 +152,6 @@ def return_command_for_compressed_sensing_reconstruction_bart(
         elif bart_regularization_option == 'l1':
             cmp = f'bart pics -S -l1 -r {bart_regularization} -i {bart_maxiter} -t {path_traj_bart} {path_to_save_kspace} {path_to_sensitivity_map} {path_to_recon_image}'
 
-    # if stepsize is defines use this stepsize; otherwise use -e flag
     if stepsize:
         substr = '-S'
         inserttxt = f'-s {stepsize} '
@@ -114,7 +163,6 @@ def return_command_for_compressed_sensing_reconstruction_bart(
         idx = cmp.index(substr)
         cmp = cmp[:idx] + inserttxt + cmp[idx:]
 
-    # if device is cuda: add -g flag
     if device == 'cuda':
         substr = '-S'
         inserttxt = f'-g '
@@ -173,17 +221,14 @@ def warm_up_bart(
     num_coils: Optional[int] = None,
 ) -> None:
     """Warm up for BART reconstruction."""
-    # define dummy input for the warm up
-    if num_coils:
+    if num_coils is not None:
         dummy_input = np.random.rand(1, num_readouts, num_spokes, num_coils)
     else:
         dummy_input = np.random.rand(1, num_readouts, num_spokes)
-    # save dummy input
     writecfl(path_to_save_kspace, dummy_input)
-    # reconstruct dummy input 10 times as a warm up
     for _ in range(
         10
-    ):  # note: since the reconstruction time for the conventional approach is much longer, a reduced number of iterations for the warm up should be sufficient
+    ):
         subprocess.run(cmp, shell=True, check=True)
 
 
