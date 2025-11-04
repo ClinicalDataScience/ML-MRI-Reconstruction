@@ -18,6 +18,7 @@
 !src/conventional_reconstruction/*.py
 !src/evaluation/*.py
 !src/machine_learning/**/*.py
+!src/machine_learning/training/helpers/**.py
 !src/preprocessing/*.py
 !src/utils/*.py
 
