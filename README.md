@@ -51,9 +51,6 @@ We train the ML model with the synthetic training data as follows:
 ```shell
  python -m scripts.03_ml_training --config_file_name <config_name> --num_spokes <number_of_spokes> --device <device> --batch_size <batch_size> --model_name <model_name> --optimizer_name <optimizer_name> --weight_decay <weight_decay> --folder_name_ml_model <folder_name_ml_model> --dropout <dropout> --noise_level <noise_level> --subfolder_name <subfolder_name>
 ```
-Please note that the following classes required for training the ML model are not included in this code upload:
-- a class `EarlyStopping` for stopping the training of the ML model in `src/machine_learning/training/helpers/early_stopping.py`
-- a class `SaveBestModel` for saving the model in `src/machine_learning/training/helpers/save_best_model.py`
 
 ### 3. Reconstructing synthetic data
 Next, we compare the reconstruction performance of the proposed ML model on the synthetic test data
@@ -90,6 +87,10 @@ and
 ```shell
 . scripts/bash_scripts/run_all_nonuniform_trajectory.sh config_nonuniform.json
 ```
+
+The MRI phantom data used in this study can be found in the folder `data/mri_phantom_data_numpy/`. This data was retrieved using the function `load_radial_k_space_measurements(...)` from `src.evaluation.reconstruct_measurements` and then element five was selected (`k_radial[5, :]`).
+
+
 
 ## Resources
 [1] Russakovsky O, Deng J, Su H, Krause J, Satheesh S, Ma S, et al. Imagenet large scale visual recognition challenge. Int J Comput Vis. 2015;115:211-52.
