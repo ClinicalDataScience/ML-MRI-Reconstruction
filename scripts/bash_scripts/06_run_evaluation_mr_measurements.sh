@@ -27,17 +27,17 @@ set_orientation_list=(0
 for number_spokes in "${list_number_of_spokes[@]}" ; do
 
     if [ $number_spokes = 101 ]; then
-        export filename='filename_101_spokes'
+        export filename='meas_MID00203_FID07645_BEAT_3slc_GRE_Radial_101.dat'
     elif [ $number_spokes = 67 ]; then
-        export filename='filename_67_spokes'
+        export filename='meas_MID00204_FID07646_BEAT_3slc_GRE_Radial_67.dat'
     elif [ $number_spokes = 51 ]; then
-        export filename='filename_51_spokes'
+        export filename='meas_MID00205_FID07647_BEAT_3slc_GRE_Radial_51.dat'
     elif [ $number_spokes = 41 ]; then
-        export filename='filename_41_spokes'
+        export filename='meas_MID00206_FID07648_BEAT_3slc_GRE_Radial_41.dat'
     elif [ $number_spokes = 33 ]; then
-        export filename='filename_33_spokes'
+        export filename='meas_MID00208_FID07650_BEAT_3slc_GRE_Radial_33.dat'
     elif [ $number_spokes = 21 ]; then
-        export filename='filename_21_spokes'
+        export filename='meas_MID00209_FID07651_BEAT_3slc_GRE_Radial_21.dat'
     fi
 
     for set_orientation in "${set_orientation_list[@]}" ; do
