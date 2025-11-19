@@ -1,7 +1,7 @@
 # Fast machine learning reconstruction of radially undersampled k-space data for low-latency real-time MRI
 This repository contains code for the fast machine learning (ML) reconstruction of radially undersampled 2D k-space data for low-latency real-time MRI.
 
-The code has been developed for the paper *"Fast machine learning image reconstruction of radially undersampled k-space data for low-latency real-time MRI"* by Topalis et al..
+The code has been developed for the paper *"Fast machine learning image reconstruction of radially undersampled k-space data for low-latency real-time MRI"*.
 
 ## Computing environment/docker container
 
@@ -100,3 +100,6 @@ The MRI phantom data used in this study can be found in the folder `data/mri_pha
 [3] Uecker M, Ong F, Tamir JI, Bahri D, Virtue P, Cheng JY, et al. Berkeley advanced reconstruction toolbox. In: Proc. Intl. Soc. Mag. Reson. Med.. vol. 23; 2015. p. 2486.
 
 [4] Uecker M, Holme C, Blumenthal M, Wang X, Tan Z, Scholand N, et al. mrirecon/bart: version 0.7.00. Zenodo. 2021 March. Available from: https://doi.org/10.5281/zenodo.4570601.
+
+## Citation
+> Topalis J, Dexl J, Jeblick K, Klaar R, Kurz C, Löhr T, et al. (2025) Fast machine learning image reconstruction of radially undersampled k-space data for low-latency real-time MRI. PLoS One 20(11): e0334604. [https://doi.org/10.1371/journal.pone.0334604](https://doi.org/10.1371/journal.pone.0334604)
